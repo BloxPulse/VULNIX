@@ -1,12 +1,25 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from collections import deque
 import ast
 import json
+import os
 import re
+import secrets
+import threading
+import time
 
-HOST = "127.0.0.1"
-PORT = 8765
+PORT = int(os.environ.get("PORT", "8765"))
+HOST = os.environ.get("HOST", "0.0.0.0" if "PORT" in os.environ else "127.0.0.1")
 MAX_SIZE = 256 * 1024
+MAX_ISSUES = 200
+SOCKET_TIMEOUT = 10
+BODY_DEADLINE = 15
+MAX_CONNECTIONS = 16
+RATE_LIMIT_PER_IP = 20
+RATE_LIMIT_GLOBAL = 120
+RATE_WINDOW = 60
+PROXY_HOPS = int(os.environ.get("PROXY_HOPS", "0"))
 
 
 def get_name(node):
@@ -56,8 +69,6 @@ def analyze(source):
     )
 
     for node in ast.walk(tree):
-
-        # Détection de fonctions potentiellement dangereuses
         if isinstance(node, ast.Call):
             name = get_name(node.func)
 
@@ -115,33 +126,26 @@ def analyze(source):
                             "column": node.col_offset + 1
                         })
 
-        # Détection de secrets écrits directement dans le code
         if isinstance(node, ast.Assign):
             targets = []
             for target in node.targets:
                 targets.extend(get_targets(target))
             value = node.value
-
         elif isinstance(node, ast.AnnAssign):
             targets = get_targets(node.target)
             value = node.value
-
         else:
             continue
 
         if isinstance(value, ast.Constant) and isinstance(value.value, str):
             text = value.value.strip()
-
             placeholders = {
                 "", "changeme", "change_me", "your_api_key",
                 "placeholder", "example", "xxx"
             }
 
             for target in targets:
-                if (
-                    secret_pattern.search(target)
-                    and text.lower() not in placeholders
-                ):
+                if secret_pattern.search(target) and text.lower() not in placeholders:
                     issues.append({
                         "severity": "medium",
                         "category": "Sécurité",
@@ -170,7 +174,101 @@ def analyze(source):
     }
 
 
+class RateLimiter:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.per_ip = {}
+        self.global_hits = deque()
+
+    def allow(self, ip):
+        now = time.monotonic()
+        limit_time = now - RATE_WINDOW
+
+        with self.lock:
+            while self.global_hits and self.global_hits[0] < limit_time:
+                self.global_hits.popleft()
+
+            if len(self.global_hits) >= RATE_LIMIT_GLOBAL:
+                return False
+
+            hits = self.per_ip.setdefault(ip, deque())
+            while hits and hits[0] < limit_time:
+                hits.popleft()
+
+            if len(hits) >= RATE_LIMIT_PER_IP:
+                return False
+
+            hits.append(now)
+            self.global_hits.append(now)
+
+            if len(self.per_ip) > 5000:
+                for key in [k for k, v in self.per_ip.items() if not v or v[-1] < limit_time]:
+                    del self.per_ip[key]
+
+            return True
+
+
+limiter = RateLimiter()
+
+
+class LimitedServer(ThreadingHTTPServer):
+    daemon_threads = True
+    request_queue_size = 32
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._slots = threading.BoundedSemaphore(MAX_CONNECTIONS)
+
+    def process_request(self, request, client_address):
+        if not self._slots.acquire(blocking=False):
+            try:
+                request.sendall(
+                    b"HTTP/1.1 503 Service Unavailable\r\n"
+                    b"Retry-After: 5\r\nContent-Length: 0\r\n"
+                    b"Connection: close\r\n\r\n"
+                )
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+
+        super().process_request(request, client_address)
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
+
+
 class Server(BaseHTTPRequestHandler):
+    timeout = SOCKET_TIMEOUT
+
+    def end_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+
+        if self.headers and self.headers.get("X-Forwarded-Proto") == "https":
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
+
+        super().end_headers()
+
+    def client_ip(self):
+        peer = self.client_address[0]
+
+        if PROXY_HOPS > 0:
+            parts = [
+                part.strip()
+                for part in self.headers.get("X-Forwarded-For", "").split(",")
+                if part.strip()
+            ]
+            if len(parts) >= PROXY_HOPS:
+                return parts[-PROXY_HOPS][:64]
+
+        return peer
 
     def send_json(self, data, status=200):
         body = json.dumps(data).encode("utf-8")
@@ -181,12 +279,40 @@ class Server(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def read_body(self, length):
+        deadline = time.monotonic() + BODY_DEADLINE
+        chunks = []
+        remaining = length
+
+        while remaining > 0:
+            if time.monotonic() > deadline:
+                raise TimeoutError("corps trop lent")
+
+            chunk = self.rfile.read(min(remaining, 16384))
+            if not chunk:
+                raise ValueError("corps incomplet")
+
+            chunks.append(chunk)
+            remaining -= len(chunk)
+
+        return b"".join(chunks)
+
     def do_GET(self):
         path = self.path.split("?", 1)[0]
 
         if path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
+            return
+
+        if path == "/healthz":
+            body = b"ok"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
             return
 
         if path not in ("/", "/index.html"):
@@ -199,9 +325,22 @@ class Server(BaseHTTPRequestHandler):
             self.send_error(500, "index.html introuvable")
             return
 
+        nonce = secrets.token_urlsafe(16)
+        page = page.replace(b"<script>", f'<script nonce="{nonce}">'.encode())
+        page = page.replace(b"<style>", f'<style nonce="{nonce}">'.encode())
+
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(page)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'none'; "
+            f"script-src 'nonce-{nonce}'; "
+            f"style-src 'nonce-{nonce}'; "
+            "connect-src 'self'; img-src 'self' data:; "
+            "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        )
         self.end_headers()
         self.wfile.write(page)
 
@@ -211,25 +350,64 @@ class Server(BaseHTTPRequestHandler):
             return
 
         try:
+            content_type = self.headers.get("Content-Type", "")
+            if not content_type.lower().startswith("application/json"):
+                self.send_json({"error": "Type de contenu non pris en charge."}, 415)
+                return
+
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0 or length > MAX_SIZE:
                 self.send_json({"error": "Fichier vide ou trop volumineux."}, 413)
                 return
 
-            payload = json.loads(self.rfile.read(length))
-            source = payload.get("code")
+            if not limiter.allow(self.client_ip()):
+                body = json.dumps({
+                    "error": "Trop de requêtes. Réessaie dans un instant."
+                }).encode("utf-8")
+                self.send_response(429)
+                self.send_header("Retry-After", "30")
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
 
+            payload = json.loads(self.read_body(length))
+            if not isinstance(payload, dict):
+                self.send_json({"error": "Requête invalide."}, 400)
+                return
+
+            source = payload.get("code")
             if not isinstance(source, str):
                 self.send_json({"error": "Code invalide."}, 400)
                 return
 
-            self.send_json(analyze(source))
+            result = analyze(source)
+            total = len(result["issues"])
+
+            if total > MAX_ISSUES:
+                result["issues"] = result["issues"][:MAX_ISSUES]
+                result["truncated"] = True
+
+            result["total_issues"] = total
+            self.send_json(result)
 
         except (ValueError, json.JSONDecodeError):
             self.send_json({"error": "Requête invalide."}, 400)
+        except (RecursionError, MemoryError):
+            self.send_json({"error": "Code trop complexe à analyser."}, 422)
+        except (TimeoutError, OSError):
+            self.close_connection = True
+        except Exception as exc:
+            print("[VULNIX] erreur interne :", type(exc).__name__)
+            try:
+                self.send_json({"error": "Erreur interne."}, 500)
+            except OSError:
+                pass
 
     def log_message(self, format, *args):
-        print("[VULNIX]", format % args)
+        message = re.sub(r"[\x00-\x1f\x7f]", "?", format % args)[:200]
+        print("[VULNIX]", message)
 
 
 if __name__ == "__main__":
@@ -237,10 +415,15 @@ if __name__ == "__main__":
     print("       VULNIX 0.1")
     print("================================")
     print(f"Interface : http://{HOST}:{PORT}")
-    print("Serveur accessible uniquement sur ce PC.")
+
+    if HOST in ("127.0.0.1", "localhost"):
+        print("Serveur accessible uniquement sur ce PC.")
+    else:
+        print("Serveur accessible depuis le réseau.")
+
     print("Arrêt : Ctrl+C")
 
-    server = ThreadingHTTPServer((HOST, PORT), Server)
+    server = LimitedServer((HOST, PORT), Server)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
