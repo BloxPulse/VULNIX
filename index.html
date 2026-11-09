@@ -3,372 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#090811">
+<meta name="description" content="VULNIX — outil expérimental d'analyse statique de code Python.">
 <title>VULNIX — Code Intelligence</title>
-
 <style>
 :root {
-    color-scheme: dark;
-    --bg: #0c0b13;
-    --panel: #151420;
-    --border: #292638;
-    --purple: #9874ff;
-    --text: #eeeaf8;
-    --muted: #9691a7;
+  color-scheme: dark;
+  --bg:#090811; --panel:#141321; --panel2:#0e0d17; --border:#2b273d;
+  --purple:#a78bfa; --purple2:#8b5cf6; --text:#f3efff; --muted:#a19bb4;
+  --green:#71ddb0; --amber:#f5bd67; --red:#ff7787; --blue:#83b8ff;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
 }
-
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: Inter, system-ui, sans-serif;
-}
-
-header {
-    height: 75px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 5%;
-}
-
-.logo {
-    font-size: 25px;
-    font-weight: 900;
-    letter-spacing: 3px;
-    color: var(--purple);
-}
-
-.logo small {
-    display: block;
-    color: var(--muted);
-    font-size: 9px;
-    letter-spacing: 2px;
-}
-
-.status {
-    color: #75dfa4;
-    font-size: 12px;
-}
-
-main {
-    max-width: 1200px;
-    margin: 45px auto;
-    padding: 0 22px;
-}
-
-h1 { font-size: 30px; margin-bottom: 8px; }
-.subtitle { color: var(--muted); margin-bottom: 30px; }
-
-.grid {
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 20px;
-}
-
-.panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 15px;
-    padding: 23px;
-    min-width: 0;
-}
-
-.panel h2 { font-size: 17px; margin-top: 0; }
-
-textarea {
-    width: 100%;
-    min-height: 380px;
-    resize: vertical;
-    background: #0e0d17;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-    color: #d7ccff;
-    font: 13px/1.7 monospace;
-    outline: none;
-}
-
-textarea:focus { border-color: var(--purple); }
-
-.controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
-}
-
-button, .file-label {
-    background: #29233c;
-    color: white;
-    border: 1px solid #40355e;
-    padding: 12px 17px;
-    border-radius: 9px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-button.primary {
-    background: var(--purple);
-    border-color: var(--purple);
-    color: #100d1b;
-    font-weight: 800;
-}
-
-button:disabled { opacity: .5; cursor: wait; }
-
-input[type=file] { display: none; }
-
-.score {
-    font-size: 45px;
-    font-weight: 800;
-    color: var(--purple);
-    margin: 12px 0;
-}
-
-.bar {
-    height: 7px;
-    background: #302b3d;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.bar-fill {
-    height: 100%;
-    width: 0;
-    background: var(--purple);
-    transition: width .3s;
-}
-
-.result-status {
-    color: var(--muted);
-    font-size: 13px;
-    margin: 14px 0 24px;
-}
-
-.issue {
-    border: 1px solid var(--border);
-    border-left: 4px solid #aaa;
-    border-radius: 9px;
-    padding: 14px;
-    margin-top: 12px;
-    background: #100f18;
-}
-
-.issue.high, .issue.error { border-left-color: #ff626f; }
-.issue.medium { border-left-color: #ffbd59; }
-.issue.low { border-left-color: #75aaff; }
-
-.issue-title { font-size: 14px; font-weight: 700; }
-
-.meta {
-    font-size: 10px;
-    color: var(--muted);
-    margin: 7px 0;
-    text-transform: uppercase;
-}
-
-.issue p {
-    font-size: 12px;
-    color: #c2bdce;
-    line-height: 1.6;
-}
-
-.suggestion { color: #b69cff !important; }
-
-.empty {
-    color: var(--muted);
-    font-size: 13px;
-    padding: 18px 0;
-    line-height: 1.6;
-}
-
-.notice {
-    margin-top: 25px;
-    padding: 15px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.6;
-}
-
-@media (max-width: 800px) {
-    .grid { grid-template-columns: 1fr; }
-    main { margin-top: 25px; }
-}
+*{box-sizing:border-box}
+html{min-width:320px;background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--text);background:radial-gradient(ellipse at 48% -18%,rgba(111,70,190,.2),transparent 48%),var(--bg)}
+button,textarea{font:inherit}
+.topbar{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px max(22px,calc((100vw - 1280px)/2));border-bottom:1px solid rgba(255,255,255,.07);background:rgba(10,9,17,.8);backdrop-filter:blur(16px)}
+.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid #b9a5f855;border-radius:13px;color:white;background:linear-gradient(145deg,#a78bfa,#7044cf);box-shadow:0 7px 24px #7c4ce033;font-size:23px;font-weight:900;letter-spacing:-2px}
+.brand-name{font-size:17px;font-weight:900;letter-spacing:.19em}.brand-sub{margin-top:4px;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.22em}
+.engine{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid #71ddb033;border-radius:99px;color:#a5efcc;background:#2c876311;font-size:10px;font-weight:800;letter-spacing:.08em;white-space:nowrap}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px #71ddb0b3}
+main{width:min(1280px,100%);margin:0 auto;padding:52px 26px 34px}.eyebrow{display:flex;align-items:center;gap:9px;margin-bottom:15px;color:#c2adff;font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}.eyebrow:before{content:"";width:22px;height:1px;background:var(--purple)}
+h1{margin:0;font-size:clamp(32px,4vw,48px);line-height:1.08;letter-spacing:-.045em;font-weight:850}h1 span{color:var(--purple);background:linear-gradient(95deg,#c4b5fd,#9270f3 65%,#a78bfa);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-desc{max-width:660px;margin:15px 0 0;color:var(--muted);font-size:14px;line-height:1.75}.chips{display:flex;flex-wrap:wrap;gap:9px;margin:20px 0 30px}.chip{padding:7px 10px;border:1px solid var(--border);border-radius:99px;color:#c5bfd5;background:#13111e;font-size:11px;font-weight:600}.chip:before{content:"✓";margin-right:7px;color:var(--green);font-weight:900}
+.workspace{display:grid;grid-template-columns:minmax(0,1.13fr) minmax(340px,.87fr);gap:18px;align-items:start}.panel{min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:18px;background:linear-gradient(155deg,#191727,#100f1a);box-shadow:0 18px 55px #00000029}.panel-head{min-height:66px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 19px;border-bottom:1px solid var(--border)}.panel-heading{display:flex;align-items:center;gap:11px}.number{width:29px;height:29px;display:grid;place-items:center;border:1px solid #a78bfa3b;border-radius:9px;color:#c6b5ff;background:#a78bfa1f;font-size:11px;font-weight:800}.panel-title{margin:0;font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.panel-kicker{margin-top:4px;color:#777187;font-size:10px}.tag{padding:6px 9px;border:1px solid #353047;border-radius:7px;color:#c9c2d8;background:#100f19;font-size:10px;font-weight:700}
+.panel-body{padding:18px}.editor{overflow:hidden;border:1px solid #302b43;border-radius:12px;background:#0b0a13;transition:border-color .18s,box-shadow .18s}.editor:focus-within{border-color:#a78bfaad;box-shadow:0 0 0 3px #8b5cf61a}.editor-top{height:39px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;border-bottom:1px solid #ffffff0e;color:#777187;font-size:10px}.window-dots{display:flex;gap:5px}.window-dots i{width:7px;height:7px;border-radius:50%;background:#514b62}.window-dots i:first-child{background:#a9768a}.window-dots i:nth-child(2){background:#b99561}.window-dots i:nth-child(3){background:#6d9c83}
+textarea{display:block;width:100%;min-height:350px;padding:18px;resize:vertical;border:0;outline:0;color:#d8cdfd;background:transparent;font:13px/1.8 "SFMono-Regular",Consolas,"Liberation Mono",monospace;tab-size:4;caret-color:#c4b5fd}textarea::placeholder{color:#625c73;opacity:1}.editor-foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 13px;border-top:1px solid #ffffff0e;color:#777187;font-size:10px}.editor-foot strong{color:#b9b1ca}
+.controls{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:15px}button,.file-label{min-height:42px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 15px;border:1px solid #403a53;border-radius:10px;color:#e7e1f5;background:#211e30;font-size:12px;font-weight:750;cursor:pointer;text-decoration:none;transition:transform .16s,border-color .16s,background .16s}button:hover:not(:disabled),.file-label:hover{transform:translateY(-1px);border-color:#65568c;background:#2a2540}button:focus-visible,.file-label:focus-within{outline:2px solid #c4b5fd;outline-offset:3px}button.primary{border-color:transparent;color:#100c1b;background:linear-gradient(110deg,#c4b5fd,#9874f4);box-shadow:0 7px 20px #8b5cf633}button.primary:hover:not(:disabled){border-color:transparent;background:linear-gradient(110deg,#d2c7ff,#a78bfa)}button:disabled{opacity:.58;cursor:wait;transform:none}button.secondary{color:#aaa3b8;background:transparent}.btn-icon{font-size:15px;line-height:1}input[type=file]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap}.message{min-height:18px;margin:10px 2px 0;color:var(--muted);font-size:11px;line-height:1.5}.message.error{color:#ff9aa5}
+.score-card{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:17px;border:1px solid #a78bfa33;border-radius:13px;background:radial-gradient(circle at 100% 0%,#8b5cf629,transparent 46%),#12101e}.score-caption{color:var(--muted);font-size:10px;font-weight:750;letter-spacing:.13em;text-transform:uppercase}.score{margin-top:8px;color:#c4b5fd;font-size:42px;font-weight:900;letter-spacing:-.05em;line-height:1}.score small{color:#8b849c;font-size:17px;font-weight:650;letter-spacing:0}.score[data-level=good]{color:var(--green)}.score[data-level=warning]{color:var(--amber)}.score[data-level=danger]{color:var(--red)}.score-note{margin-top:7px;color:#777187;font-size:10px}.score-icon{width:52px;height:52px;display:grid;place-items:center;border:1px solid #a78bfa40;border-radius:15px;color:#c8b8ff;background:#8b5cf61f;font-size:23px}.progress-wrap{margin-top:16px}.progress-meta{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;color:#777187;font-size:10px}.progress-track{height:7px;overflow:hidden;border-radius:99px;background:#2b2739}.bar-fill{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8054df,#c0aaff);transition:width .4s}.bar-fill[data-level=good]{background:linear-gradient(90deg,#329c79,#79e3b7)}.bar-fill[data-level=warning]{background:linear-gradient(90deg,#bd873b,#f6c477)}.bar-fill[data-level=danger]{background:linear-gradient(90deg,#c74d67,#ff8997)}
+.result-status{min-height:42px;display:flex;align-items:center;gap:9px;margin:13px 0 18px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;color:#c3bdcf;background:#0b0a13a6;font-size:11px;line-height:1.5}.status-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#827a94}.results-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;color:#e7e1f2;font-size:11px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.count{padding:4px 8px;border:1px solid var(--border);border-radius:99px;color:#bcb4cc;background:#151321;font-size:10px;letter-spacing:0}#results{max-height:385px;overflow:auto;padding-right:2px}#results::-webkit-scrollbar{width:6px}#results::-webkit-scrollbar-thumb{border-radius:99px;background:#3a344c}
+.issue{margin-top:10px;padding:13px 14px;border:1px solid var(--border);border-left:3px solid #827a94;border-radius:10px;background:#0b0a13a6}.issue.high,.issue.error{border-left-color:var(--red)}.issue.medium{border-left-color:var(--amber)}.issue.low{border-left-color:var(--blue)}.issue-title{color:#f0ebfa;font-size:12px;font-weight:800;line-height:1.45}.meta{margin-top:7px;color:#938ba4;font-size:9px;font-weight:750;letter-spacing:.09em;text-transform:uppercase}.issue p{margin:9px 0 0;color:#bcb5ca;font-size:11px;line-height:1.65;overflow-wrap:anywhere}.issue p.suggestion{color:#c1aaff}.empty{display:grid;justify-items:center;gap:9px;padding:27px 16px;border:1px dashed #363047;border-radius:11px;color:var(--muted);background:#0b0a1359;font-size:11px;line-height:1.65;text-align:center}.empty-icon{width:34px;height:34px;display:grid;place-items:center;border:1px solid #353047;border-radius:11px;color:#b7a2f7;background:#a78bfa1f;font-size:16px}
+.notice{display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:14px 16px;border:1px solid #a78bfa29;border-radius:12px;color:var(--muted);background:#8b5cf60b;font-size:11px;line-height:1.7}.notice-icon{flex:0 0 auto;color:#b9a5f8;font-size:15px}.notice strong{color:#d4c9f5}.footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:24px;color:#6f697e;font-size:10px}
+@media(max-width:900px){main{padding-top:38px}.workspace{grid-template-columns:minmax(0,1fr)}#results{max-height:none}}
+@media(max-width:560px){.topbar{min-height:66px;padding:11px 15px}.brand-mark{width:37px;height:37px;border-radius:11px;font-size:20px}.brand-name{font-size:15px}.brand-sub{font-size:8px}.engine{padding:8px 9px;font-size:9px}main{padding:34px 14px 25px}.hero-desc{font-size:13px}.panel-head{padding:14px}.panel-body{padding:13px}textarea{min-height:290px;padding:14px;font-size:12px}.controls{display:grid;grid-template-columns:1fr 1fr}.controls .primary{grid-column:1/-1}.controls button,.controls .file-label{width:100%;padding:0 9px}.score-card{padding:14px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 </style>
 </head>
-
 <body>
-
-<header>
-    <div class="logo">
-        VULNIX
-        <small>CODE INTELLIGENCE</small>
-    </div>
-    <div class="status">● SERVER ENGINE</div>
+<header class="topbar">
+  <div class="brand" aria-label="VULNIX Code Intelligence"><div class="brand-mark" aria-hidden="true">V</div><div><div class="brand-name">VULNIX</div><div class="brand-sub">CODE INTELLIGENCE</div></div></div>
+  <div class="engine"><span class="dot" aria-hidden="true"></span> SERVER ENGINE</div>
 </header>
-
 <main>
-    <h1>Code Analysis</h1>
-    <p class="subtitle">Analyse ton code. Détecte les problèmes. Améliore ta sécurité.</p>
+  <section class="hero">
+    <div class="eyebrow">Python security analysis</div>
+    <h1>Comprends ton code.<br><span>Renforce sa sécurité.</span></h1>
+    <p class="hero-desc">Analyse ton code Python, repère les pratiques à risque et découvre des pistes d'amélioration dans une interface claire et pensée pour aller à l'essentiel.</p>
+    <div class="chips"><span class="chip">Analyse statique</span><span class="chip">Code non exécuté</span><span class="chip">Résultats détaillés</span></div>
+  </section>
 
-    <div class="grid">
+  <div class="workspace">
+    <section class="panel" aria-labelledby="source-title">
+      <div class="panel-head"><div class="panel-heading"><span class="number">01</span><div><h2 class="panel-title" id="source-title">Code source</h2><div class="panel-kicker">Colle ton script ou importe un fichier</div></div></div><span class="tag">PYTHON</span></div>
+      <div class="panel-body">
+        <div class="editor">
+          <div class="editor-top"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>main.py</span><span>UTF-8</span></div>
+          <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code Python à analyser" placeholder="# Colle ton code Python ici&#10;&#10;def hello():&#10;    print('Hello VULNIX!')"></textarea>
+          <div class="editor-foot"><span><strong id="charCount">0</strong> caractères</span><span>Maximum fichier : <strong>256 Ko</strong></span></div>
+        </div>
+        <div class="controls">
+          <button class="primary" id="analyze" type="button"><span class="btn-icon" aria-hidden="true">⌁</span> Analyser le code <span aria-hidden="true">→</span></button>
+          <label class="file-label" for="file"><span class="btn-icon" aria-hidden="true">↥</span> Importer un fichier</label>
+          <input type="file" id="file" accept=".py,.txt" aria-label="Importer un fichier Python ou texte">
+          <button class="secondary" id="clear" type="button">Effacer</button>
+        </div>
+        <p class="message" id="editorMessage" role="status" aria-live="polite">Prêt à analyser ton code.</p>
+      </div>
+    </section>
 
-        <section class="panel">
-            <h2>01 / Source Code</h2>
+    <section class="panel" aria-labelledby="results-title">
+      <div class="panel-head"><div class="panel-heading"><span class="number">02</span><div><h2 class="panel-title" id="results-title">Résultats</h2><div class="panel-kicker">Synthèse de l'analyse</div></div></div><span class="tag">VULNIX 0.1</span></div>
+      <div class="panel-body">
+        <div class="score-card"><div><div class="score-caption">Score indicatif</div><div class="score" id="score" data-level="neutral">--<small>/100</small></div><div class="score-note">Basé sur les règles de détection actuelles</div></div><div class="score-icon" aria-hidden="true">◈</div></div>
+        <div class="progress-wrap"><div class="progress-meta"><span>Évaluation</span><span id="scorePercent">En attente</span></div><div class="progress-track" id="scoreProgress" role="progressbar" aria-label="Score de l'analyse" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar-fill" id="bar" data-level="neutral"></div></div></div>
+        <div class="result-status" id="status" role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span>En attente d'une analyse.</span></div>
+        <div class="results-title"><span>Détails détectés</span><span class="count" id="issueCount">0 alerte</span></div>
+        <div id="results"><div class="empty"><span class="empty-icon" aria-hidden="true">⌕</span><span>Les résultats apparaîtront ici après l'analyse de ton code.</span></div></div>
+      </div>
+    </section>
+  </div>
 
-            <textarea id="code" spellcheck="false"
-placeholder="# Colle ton code Python ici
-
-def hello():
-    print('Hello VULNIX!')
-"></textarea>
-
-            <div class="controls">
-                <button class="primary" id="analyze">Analyser le code →</button>
-
-                <label class="file-label" for="file">Importer un fichier</label>
-                <input type="file" id="file" accept=".py,.txt">
-            </div>
-        </section>
-
-        <section class="panel">
-            <h2>02 / Analysis Results</h2>
-
-            <div class="score" id="score">--/100</div>
-            <div class="bar"><div class="bar-fill" id="bar"></div></div>
-
-            <div class="result-status" id="status">
-                En attente d'une analyse.
-            </div>
-
-            <div id="results">
-                <div class="empty">
-                    Les résultats de ton analyse apparaîtront ici.
-                </div>
-            </div>
-        </section>
-
-    </div>
-
-    <div class="notice">
-        VULNIX 0.1 — Analyse statique expérimentale.
-        Le code est analysé sans être exécuté.
-        Un résultat sans alerte ne garantit pas l'absence de vulnérabilités.
-    </div>
+  <aside class="notice"><span class="notice-icon" aria-hidden="true">ⓘ</span><div><strong>À propos de VULNIX 0.1.</strong> Il s'agit d'un outil expérimental d'analyse statique : le code soumis n'est pas exécuté. Les règles sont encore limitées ; un résultat sans alerte ne garantit pas l'absence de vulnérabilités. Évite d'envoyer du code confidentiel ou des secrets.</div></aside>
+  <footer class="footer"><span>VULNIX — CODE INTELLIGENCE</span><span>Conçu pour rendre l'analyse plus lisible.</span></footer>
 </main>
-
 <script>
 const editor = document.getElementById("code");
 const fileInput = document.getElementById("file");
 const button = document.getElementById("analyze");
+const clearButton = document.getElementById("clear");
 const results = document.getElementById("results");
 const score = document.getElementById("score");
 const status = document.getElementById("status");
 const bar = document.getElementById("bar");
+const charCount = document.getElementById("charCount");
+const editorMessage = document.getElementById("editorMessage");
+const issueCount = document.getElementById("issueCount");
+const scorePercent = document.getElementById("scorePercent");
+const scoreProgress = document.getElementById("scoreProgress");
 
-fileInput.addEventListener("change", async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-
-    if (file.size > 256 * 1024) {
-        alert("Fichier trop volumineux : maximum 256 Ko.");
-        fileInput.value = "";
-        return;
-    }
-
-    editor.value = await file.text();
-});
-
+function updateCharacterCount() {
+  charCount.textContent = editor.value.length.toLocaleString("fr-FR");
+}
+function showEditorMessage(message, isError = false) {
+  editorMessage.textContent = message;
+  editorMessage.classList.toggle("error", isError);
+}
+function setStatus(message, tone = "neutral") {
+  const indicator = document.createElement("span");
+  indicator.className = "status-dot";
+  indicator.setAttribute("aria-hidden", "true");
+  if (tone === "success") indicator.style.background = "var(--green)";
+  if (tone === "warning") indicator.style.background = "var(--amber)";
+  if (tone === "error") indicator.style.background = "var(--red)";
+  const text = document.createElement("span");
+  text.textContent = message;
+  status.replaceChildren(indicator, text);
+}
 function addText(parent, tag, className, content) {
-    const element = document.createElement(tag);
-    element.className = className;
-    element.textContent = content;
-    parent.appendChild(element);
+  const element = document.createElement(tag);
+  element.className = className;
+  element.textContent = String(content ?? "");
+  parent.appendChild(element);
+  return element;
+}
+function setScore(value) {
+  const numericScore = Number(value);
+  const safeScore = Number.isFinite(numericScore) ? Math.max(0, Math.min(100, numericScore)) : 0;
+  const level = safeScore >= 80 ? "good" : safeScore >= 50 ? "warning" : "danger";
+  score.dataset.level = level;
+  score.replaceChildren();
+  score.append(document.createTextNode(String(value)));
+  addText(score, "small", "", "/100");
+  bar.dataset.level = level;
+  bar.style.width = safeScore + "%";
+  scorePercent.textContent = safeScore + " / 100";
+  scoreProgress.setAttribute("aria-valuenow", String(safeScore));
+}
+function renderIssues(issues) {
+  results.replaceChildren();
+  issueCount.textContent = issues.length + (issues.length > 1 ? " alertes" : " alerte");
+  if (issues.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    addText(empty, "span", "empty-icon", "✓");
+    addText(empty, "span", "", "Aucune alerte détectée par les règles actuelles. Cela ne prouve pas que le code est entièrement sécurisé.");
+    results.appendChild(empty);
+    return;
+  }
+  for (const issue of issues) {
+    const card = document.createElement("article");
+    const rawSeverity = String(issue.severity || "low").toLowerCase();
+    const severity = ["high", "medium", "low", "error"].includes(rawSeverity) ? rawSeverity : "low";
+    card.className = "issue " + severity;
+    addText(card, "div", "issue-title", issue.title || "Alerte détectée");
+    const location = issue.line ? "Ligne " + issue.line + (issue.column ? " · Colonne " + issue.column : "") : "Emplacement inconnu";
+    addText(card, "div", "meta", severity.toUpperCase() + " · " + (issue.category || "Autre") + " · " + location);
+    addText(card, "p", "", issue.detail || "Aucun détail supplémentaire.");
+    addText(card, "p", "suggestion", "Suggestion : " + (issue.suggestion || "Vérifie ce point dans ton code."));
+    results.appendChild(card);
+  }
 }
 
-button.addEventListener("click", async () => {
-    if (!editor.value.trim()) {
-        alert("Ajoute du code avant de lancer l'analyse.");
-        return;
-    }
-
-    button.disabled = true;
-    button.textContent = "Analyse en cours...";
-    status.textContent = "Analyse du code Python...";
-    results.replaceChildren();
-
-    try {
-        const response = await fetch("/api/analyze", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({code: editor.value})
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || "Erreur du serveur.");
-        }
-
-        score.textContent = data.score + "/100";
-        bar.style.width = data.score + "%";
-
-        status.textContent = data.valid_syntax
-            ? data.issues.length + " problème(s) détecté(s) par les règles actuelles."
-            : "La syntaxe Python contient une erreur.";
-
-        if (data.issues.length === 0) {
-            addText(
-                results,
-                "div",
-                "empty",
-                "Aucun problème détecté par les règles actuelles. Cela ne garantit pas que le code est sécurisé."
-            );
-        }
-
-        for (const issue of data.issues) {
-            const card = document.createElement("article");
-            card.className = "issue " + issue.severity;
-
-            addText(card, "div", "issue-title", issue.title);
-
-            const location = issue.line
-                ? "Ligne " + issue.line + " · Colonne " + issue.column
-                : "Emplacement inconnu";
-
-            addText(
-                card,
-                "div",
-                "meta",
-                issue.severity.toUpperCase() + " · " +
-                issue.category + " · " + location
-            );
-
-            addText(card, "p", "", issue.detail);
-            addText(
-                card,
-                "p",
-                "suggestion",
-                "Suggestion : " + issue.suggestion
-            );
-
-            results.appendChild(card);
-        }
-
-    } catch (error) {
-        status.textContent = "Impossible de réaliser l'analyse.";
-        addText(results, "div", "empty", error.message);
-    } finally {
-        button.disabled = false;
-        button.textContent = "Analyser le code →";
-    }
+editor.addEventListener("input", updateCharacterCount);
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  if (file.size > 256 * 1024) {
+    showEditorMessage("Fichier trop volumineux : maximum 256 Ko.", true);
+    fileInput.value = "";
+    return;
+  }
+  try {
+    editor.value = await file.text();
+    updateCharacterCount();
+    showEditorMessage("Fichier importé : " + file.name);
+    editor.focus();
+  } catch {
+    showEditorMessage("Impossible de lire ce fichier.", true);
+  } finally {
+    fileInput.value = "";
+  }
 });
+clearButton.addEventListener("click", () => {
+  editor.value = "";
+  updateCharacterCount();
+  showEditorMessage("Éditeur vidé.");
+  editor.focus();
+});
+button.addEventListener("click", async () => {
+  if (!editor.value.trim()) {
+    showEditorMessage("Ajoute du code avant de lancer l'analyse.", true);
+    editor.focus();
+    return;
+  }
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.textContent = "Analyse en cours...";
+  setStatus("Analyse du code Python en cours...");
+  results.replaceChildren();
+  issueCount.textContent = "En cours";
+  showEditorMessage("Analyse envoyée au serveur…");
+  try {
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({code: editor.value})
+    });
+    let data;
+    try { data = await response.json(); }
+    catch { throw new Error("Le serveur a renvoyé une réponse illisible."); }
+    if (!response.ok) throw new Error(data.error || "Erreur du serveur.");
+    const issues = Array.isArray(data.issues) ? data.issues : [];
+    setScore(data.score);
+    renderIssues(issues);
+    if (data.valid_syntax) {
+      setStatus(issues.length + (issues.length > 1 ? " alerte(s) signalée(s)" : " alerte signalée") + " par les règles actuelles.", issues.length ? "warning" : "success");
+    } else {
+      setStatus("La syntaxe Python contient une erreur.", "error");
+    }
+    showEditorMessage("Analyse terminée.");
+  } catch (error) {
+    setStatus("Impossible de réaliser l'analyse.", "error");
+    issueCount.textContent = "Erreur";
+    results.replaceChildren();
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    addText(empty, "span", "empty-icon", "!");
+    addText(empty, "span", "", error.message || "Une erreur inattendue est survenue.");
+    results.appendChild(empty);
+    showEditorMessage("L'analyse a échoué. Vérifie ta connexion puis réessaie.", true);
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+    button.innerHTML = '<span class="btn-icon" aria-hidden="true">⌁</span> Analyser le code <span aria-hidden="true">→</span>';
+  }
+});
+updateCharacterCount();
 </script>
-
 </body>
 </html>
