@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from collections import deque
 import ast
+import ipaddress
 import json
 import os
 import re
@@ -19,7 +20,6 @@ MAX_CONNECTIONS = 16
 RATE_LIMIT_PER_IP = 20
 RATE_LIMIT_GLOBAL = 120
 RATE_WINDOW = 60
-PROXY_HOPS = int(os.environ.get("PROXY_HOPS", "0"))
 
 
 def get_name(node):
@@ -202,7 +202,11 @@ class RateLimiter:
             self.global_hits.append(now)
 
             if len(self.per_ip) > 5000:
-                for key in [k for k, v in self.per_ip.items() if not v or v[-1] < limit_time]:
+                expired = [
+                    key for key, values in self.per_ip.items()
+                    if not values or values[-1] < limit_time
+                ]
+                for key in expired:
                     del self.per_ip[key]
 
             return True
@@ -258,17 +262,12 @@ class Server(BaseHTTPRequestHandler):
 
     def client_ip(self):
         peer = self.client_address[0]
+        forwarded_ip = self.headers.get("CF-Connecting-IP", "").strip()
 
-        if PROXY_HOPS > 0:
-            parts = [
-                part.strip()
-                for part in self.headers.get("X-Forwarded-For", "").split(",")
-                if part.strip()
-            ]
-            if len(parts) >= PROXY_HOPS:
-                return parts[-PROXY_HOPS][:64]
-
-        return peer
+        try:
+            return str(ipaddress.ip_address(forwarded_ip))
+        except ValueError:
+            return peer
 
     def send_json(self, data, status=200):
         body = json.dumps(data).encode("utf-8")
