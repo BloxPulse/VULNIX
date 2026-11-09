@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VULNIX — Code Intelligence</title>
+
+<style>
+:root {
+    color-scheme: dark;
+    --bg: #0c0b13;
+    --panel: #151420;
+    --border: #292638;
+    --purple: #9874ff;
+    --text: #eeeaf8;
+    --muted: #9691a7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, system-ui, sans-serif;
+}
+
+header {
+    height: 75px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5%;
+}
+
+.logo {
+    font-size: 25px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--purple);
+}
+
+.logo small {
+    display: block;
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 2px;
+}
+
+.status {
+    color: #75dfa4;
+    font-size: 12px;
+}
+
+main {
+    max-width: 1200px;
+    margin: 45px auto;
+    padding: 0 22px;
+}
+
+h1 { font-size: 30px; margin-bottom: 8px; }
+.subtitle { color: var(--muted); margin-bottom: 30px; }
+
+.grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px;
+}
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 23px;
+    min-width: 0;
+}
+
+.panel h2 { font-size: 17px; margin-top: 0; }
+
+textarea {
+    width: 100%;
+    min-height: 380px;
+    resize: vertical;
+    background: #0e0d17;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    color: #d7ccff;
+    font: 13px/1.7 monospace;
+    outline: none;
+}
+
+textarea:focus { border-color: var(--purple); }
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+button, .file-label {
+    background: #29233c;
+    color: white;
+    border: 1px solid #40355e;
+    padding: 12px 17px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+button.primary {
+    background: var(--purple);
+    border-color: var(--purple);
+    color: #100d1b;
+    font-weight: 800;
+}
+
+button:disabled { opacity: .5; cursor: wait; }
+
+input[type=file] { display: none; }
+
+.score {
+    font-size: 45px;
+    font-weight: 800;
+    color: var(--purple);
+    margin: 12px 0;
+}
+
+.bar {
+    height: 7px;
+    background: #302b3d;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    width: 0;
+    background: var(--purple);
+    transition: width .3s;
+}
+
+.result-status {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 14px 0 24px;
+}
+
+.issue {
+    border: 1px solid var(--border);
+    border-left: 4px solid #aaa;
+    border-radius: 9px;
+    padding: 14px;
+    margin-top: 12px;
+    background: #100f18;
+}
+
+.issue.high, .issue.error { border-left-color: #ff626f; }
+.issue.medium { border-left-color: #ffbd59; }
+.issue.low { border-left-color: #75aaff; }
+
+.issue-title { font-size: 14px; font-weight: 700; }
+
+.meta {
+    font-size: 10px;
+    color: var(--muted);
+    margin: 7px 0;
+    text-transform: uppercase;
+}
+
+.issue p {
+    font-size: 12px;
+    color: #c2bdce;
+    line-height: 1.6;
+}
+
+.suggestion { color: #b69cff !important; }
+
+.empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 18px 0;
+    line-height: 1.6;
+}
+
+.notice {
+    margin-top: 25px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+@media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+    main { margin-top: 25px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">
+        VULNIX
+        <small>CODE INTELLIGENCE</small>
+    </div>
+    <div class="status">● LOCAL ENGINE</div>
+</header>
+
+<main>
+    <h1>Code Analysis</h1>
+    <p class="subtitle">Analyse ton code. Détecte les problèmes. Améliore ta sécurité.</p>
+
+    <div class="grid">
+
+        <section class="panel">
+            <h2>01 / Source Code</h2>
+
+            <textarea id="code" spellcheck="false"
+placeholder="# Colle ton code Python ici
+
+def hello():
+    print('Hello VULNIX!')
+"></textarea>
+
+            <div class="controls">
+                <button class="primary" id="analyze">Analyser le code →</button>
+
+                <label class="file-label" for="file">Importer un fichier</label>
+                <input type="file" id="file" accept=".py,.txt">
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>02 / Analysis Results</h2>
+
+            <div class="score" id="score">--/100</div>
+            <div class="bar"><div class="bar-fill" id="bar"></div></div>
+
+            <div class="result-status" id="status">
+                En attente d'une analyse.
+            </div>
+
+            <div id="results">
+                <div class="empty">
+                    Les résultats de ton analyse apparaîtront ici.
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <div class="notice">
+        VULNIX 0.1 — Analyse statique expérimentale.
+        Le code est analysé sans être exécuté.
+        Un résultat sans alerte ne garantit pas l'absence de vulnérabilités.
+    </div>
+</main>
+
+<script>
+const editor = document.getElementById("code");
+const fileInput = document.getElementById("file");
+const button = document.getElementById("analyze");
+const results = document.getElementById("results");
+const score = document.getElementById("score");
+const status = document.getElementById("status");
+const bar = document.getElementById("bar");
+
+fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    if (file.size > 256 * 1024) {
+        alert("Fichier trop volumineux : maximum 256 Ko.");
+        fileInput.value = "";
+        return;
+    }
+
+    editor.value = await file.text();
+});
+
+function addText(parent, tag, className, content) {
+    const element = document.createElement(tag);
+    element.className = className;
+    element.textContent = content;
+    parent.appendChild(element);
+}
+
+button.addEventListener("click", async () => {
+    if (!editor.value.trim()) {
+        alert("Ajoute du code avant de lancer l'analyse.");
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Analyse en cours...";
+    status.textContent = "Analyse du code Python...";
+    results.replaceChildren();
+
+    try {
+        const response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({code: editor.value})
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Erreur du serveur.");
+        }
+
+        score.textContent = data.score + "/100";
+        bar.style.width = data.score + "%";
+
+        status.textContent = data.valid_syntax
+            ? data.issues.length + " problème(s) détecté(s) par les règles actuelles."
+            : "La syntaxe Python contient une erreur.";
+
+        if (data.issues.length === 0) {
+            addText(
+                results,
+                "div",
+                "empty",
+                "Aucun problème détecté par les règles actuelles. Cela ne garantit pas que le code est sécurisé."
+            );
+        }
+
+        for (const issue of data.issues) {
+            const card = document.createElement("article");
+            card.className = "issue " + issue.severity;
+
+            addText(card, "div", "issue-title", issue.title);
+
+            const location = issue.line
+                ? "Ligne " + issue.line + " · Colonne " + issue.column
+                : "Emplacement inconnu";
+
+            addText(
+                card,
+                "div",
+                "meta",
+                issue.severity.toUpperCase() + " · " +
+                issue.category + " · " + location
+            );
+
+            addText(card, "p", "", issue.detail);
+            addText(
+                card,
+                "p",
+                "suggestion",
+                "Suggestion : " + issue.suggestion
+            );
+
+            results.appendChild(card);
+        }
+
+    } catch (error) {
+        status.textContent = "Impossible de réaliser l'analyse.";
+        addText(results, "div", "empty", error.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Analyser le code →";
+    }
+});
+</script>
+
+</body>
+</html>
